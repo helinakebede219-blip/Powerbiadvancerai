@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 # PyYAML is optional; fall back to JSON-only mode if unavailable.
 try:  # pragma: no cover - import guard
@@ -32,6 +32,7 @@ class AutomationConfig:
     provider: ProviderConfig
     tools: Dict[str, Dict[str, Any]] | None = None
     max_steps: int = 10
+    safety: "SafetyConfig" = field(default_factory=lambda: SafetyConfig(enabled=True))
 
     @classmethod
     def from_dict(cls, payload: Dict[str, Any]) -> "AutomationConfig":
@@ -40,6 +41,24 @@ class AutomationConfig:
             provider=provider,
             tools=payload.get("tools"),
             max_steps=int(payload.get("max_steps", 10)),
+            safety=SafetyConfig.from_dict(payload.get("safety", {})),
+        )
+
+
+@dataclass
+class SafetyConfig:
+    """Configuration for the prompt safety engine."""
+
+    enabled: bool = True
+    rules: List[Dict[str, Any]] | None = None
+
+    @classmethod
+    def from_dict(cls, payload: Dict[str, Any]) -> "SafetyConfig":
+        if not payload:
+            return cls()
+        return cls(
+            enabled=bool(payload.get("enabled", True)),
+            rules=payload.get("rules"),
         )
 
 

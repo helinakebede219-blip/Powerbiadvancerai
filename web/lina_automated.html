@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LINA AUTOMATED</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --accent: #cdbbff;
+        --text-primary: #f9f9fb;
+        --text-secondary: #9ca3c7;
+        --background: radial-gradient(circle at top, rgba(85, 73, 128, 0.6), #05060f 70%);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Inter", "Segoe UI", sans-serif;
+        color: var(--text-primary);
+        background: var(--background);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      .stars {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background-image: radial-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1px);
+        background-size: 120px 120px;
+        animation: drift 40s linear infinite;
+        opacity: 0.35;
+      }
+
+      @keyframes drift {
+        from {
+          transform: translate3d(0, 0, 0);
+        }
+        to {
+          transform: translate3d(-60px, -40px, 0);
+        }
+      }
+
+      .container {
+        position: relative;
+        padding: 4rem 2rem;
+        width: min(620px, 90vw);
+        text-align: center;
+        backdrop-filter: blur(12px);
+      }
+
+      .badge {
+        letter-spacing: 0.35rem;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        margin-bottom: 1.25rem;
+      }
+
+      h1 {
+        font-size: clamp(2.5rem, 6vw, 3.8rem);
+        margin: 0;
+        font-weight: 600;
+      }
+
+      .version {
+        font-size: 0.9rem;
+        margin-top: 0.4rem;
+        color: var(--accent);
+        letter-spacing: 0.25rem;
+      }
+
+      .search {
+        margin: 3rem auto 0;
+        position: relative;
+        width: min(520px, 100%);
+      }
+
+      .search input {
+        width: 100%;
+        padding: 1.1rem 4rem 1.1rem 1.3rem;
+        border-radius: 999px;
+        border: 1px solid rgba(205, 187, 255, 0.4);
+        background: rgba(5, 6, 15, 0.65);
+        color: var(--text-primary);
+        font-size: 1.05rem;
+        box-shadow: 0 20px 40px rgba(14, 12, 30, 0.5);
+        outline: none;
+        transition: border 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .search input:focus {
+        border-color: rgba(205, 187, 255, 0.8);
+        box-shadow: 0 24px 50px rgba(15, 12, 38, 0.6);
+      }
+
+      .search button {
+        position: absolute;
+        top: 50%;
+        right: 0.75rem;
+        transform: translateY(-50%);
+        width: 2.8rem;
+        height: 2.8rem;
+        border-radius: 50%;
+        border: none;
+        background: linear-gradient(135deg, rgba(205, 187, 255, 0.8), rgba(118, 97, 184, 0.8));
+        color: #080910;
+        font-size: 1.4rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 12px 25px rgba(118, 97, 184, 0.4);
+      }
+
+      .search button:hover {
+        transform: translateY(-50%) scale(1.05);
+      }
+
+      footer {
+        margin-top: 4rem;
+        font-size: 0.75rem;
+        letter-spacing: 0.2rem;
+        color: var(--text-secondary);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stars" aria-hidden="true"></div>
+    <main class="container" aria-label="LINA AUTOMATED search interface">
+      <div class="badge">AUTONOMOUS OPS</div>
+      <h1>LINA AUTOMATED</h1>
+      <div class="version">v0.1</div>
+      <div class="search">
+        <input type="text" placeholder="Ask LINA for a workflow" aria-label="Search" />
+        <button type="button" aria-label="Submit">?</button>
+      </div>
+      <footer>Analytics Assist · Secure by Safeguards</footer>
+    </main>
+  </body>
+</html>

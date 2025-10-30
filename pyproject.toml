@@ -3,10 +3,10 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "powerbi-advancer-agent"
+name = "lina-automated-agent"
 version = "0.1.0"
-description = "Agent framework for automating Power BI and data workflows from prompts."
-authors = [{name = "PowerBI Advancer AI"}]
+description = "LINA AUTOMATED agent for orchestrating analytics workflows with built-in safeguards."
+authors = [{name = "LINA AUTOMATED"}]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

@@ -14,11 +14,13 @@ from automation_agent import (
     OpenAIProvider,
     LlamaCppProvider,
     ProviderConfig,
+    PromptSafetyEngine,
+    PromptSafetyRule,
     PythonCallableTool,
     ToolRegistry,
     register_builtin_tools,
 )
-from automation_agent.config import AutomationConfig, load_config
+from automation_agent.config import AutomationConfig, SafetyConfig, load_config
 
 
 PROVIDER_FACTORY = {
@@ -44,7 +46,7 @@ def build_provider(cfg: ProviderConfig) -> LLMProvider:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run the PowerBI Advancer automation agent")
+    parser = argparse.ArgumentParser(description="Run the LINA AUTOMATED agent")
     parser.add_argument("prompt", help="Natural language description of the automation to create")
     parser.add_argument("--config", type=Path, default=Path("automation_config.yml"), help="Path to agent configuration")
     parser.add_argument("--context", type=Path, help="Optional JSON file with execution context")
@@ -68,7 +70,13 @@ def main() -> None:
                 )
             )
 
-    agent = AutomationAgent(provider=provider, registry=registry, max_steps=config.max_steps)
+    safety_engine = build_safety_engine(config.safety)
+    agent = AutomationAgent(
+        provider=provider,
+        registry=registry,
+        max_steps=config.max_steps,
+        safety_engine=safety_engine,
+    )
     context: Dict[str, Any] = {}
     if args.context:
         context = json.loads(args.context.read_text(encoding="utf-8"))
@@ -87,6 +95,15 @@ def exec_tool(body: str, args: Dict[str, Any], state: Dict[str, Any]) -> str:
     exec(body, {}, local_vars)
     output = local_vars.get("output")
     return str(output) if output is not None else ""
+
+
+def build_safety_engine(config: SafetyConfig) -> PromptSafetyEngine | None:
+    if not config.enabled:
+        return None
+    engine = PromptSafetyEngine.default()
+    for payload in config.rules or []:
+        engine.add_rule(PromptSafetyRule.from_dict(payload))
+    return engine
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Optional
 
 from .llm import LLMProvider
+from .safety import PromptSafetyEngine
 from .tooling import ToolRegistry, ToolExecutionError
 
 LOGGER = logging.getLogger(__name__)
@@ -41,13 +42,30 @@ class AutomationAgent:
         registry: ToolRegistry,
         *,
         max_steps: int = 10,
+        safety_engine: PromptSafetyEngine | None = None,
     ) -> None:
         self.provider = provider
         self.registry = registry
         self.max_steps = max_steps
+        self.safety_engine = safety_engine
 
     def plan_workflow(self, prompt: str, *, context: Optional[Dict[str, Any]] = None) -> List[PlanStep]:
         """Create a structured workflow plan from a natural language prompt."""
+
+        if self.safety_engine:
+            report = self.safety_engine.inspect(prompt, context=context)
+            if not report.passed:
+                LOGGER.warning("Prompt blocked by safety guard: %s", report.summary())
+                return [
+                    PlanStep(
+                        tool="analysis",
+                        description="Safety review required before automation can proceed",
+                        args={
+                            "prompt": prompt,
+                            "safety_findings": [finding.to_dict() for finding in report.findings],
+                        },
+                    )
+                ]
 
         planning_prompt = self._build_planning_prompt(prompt, context=context)
         response = self.provider.generate(planning_prompt, context=context)
@@ -93,7 +111,7 @@ class AutomationAgent:
         )
         context_blob = json.dumps(context, indent=2) if context else "{}"
         return (
-            "You are PowerBI Advancer, an automation architect.\n"
+            "You are LINA AUTOMATED, an automation architect.\n"
             "Create a JSON object with a `steps` array. Each step must contain the fields\n"
             "`tool` (matching a registered tool name), `description`, and optional `args`.\n"
             "Only use the tools listed below. If a tool is missing, propose a descriptive\n"
