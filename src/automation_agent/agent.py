@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 from .llm import LLMProvider
 from .tooling import ToolRegistry, ToolExecutionError
+from .safety import SafetyChecker
 
 LOGGER = logging.getLogger(__name__)
 
@@ -41,20 +42,26 @@ class AutomationAgent:
         registry: ToolRegistry,
         *,
         max_steps: int = 10,
+        safety: Optional[SafetyChecker] = None,
     ) -> None:
         self.provider = provider
         self.registry = registry
         self.max_steps = max_steps
+        self.safety = safety
 
     def plan_workflow(self, prompt: str, *, context: Optional[Dict[str, Any]] = None) -> List[PlanStep]:
         """Create a structured workflow plan from a natural language prompt."""
 
+        if self.safety:
+            self.safety.check_prompt(prompt, context=context)
         planning_prompt = self._build_planning_prompt(prompt, context=context)
         response = self.provider.generate(planning_prompt, context=context)
         steps = self._parse_plan_response(response)
         if not steps:
             LOGGER.info("Falling back to heuristic plan generation")
             steps = self._fallback_plan(prompt)
+        if self.safety:
+            self.safety.check_plan(steps)
         return steps[: self.max_steps]
 
     def execute_workflow(
@@ -93,7 +100,7 @@ class AutomationAgent:
         )
         context_blob = json.dumps(context, indent=2) if context else "{}"
         return (
-            "You are PowerBI Advancer, an automation architect.\n"
+            "You are LINA AUTOMATED, an automation architect.\n"
             "Create a JSON object with a `steps` array. Each step must contain the fields\n"
             "`tool` (matching a registered tool name), `description`, and optional `args`.\n"
             "Only use the tools listed below. If a tool is missing, propose a descriptive\n"

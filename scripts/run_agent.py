@@ -13,12 +13,15 @@ from automation_agent import (
     LLMProvider,
     OpenAIProvider,
     LlamaCppProvider,
+    OpenAICompatibleProvider,
     ProviderConfig,
     PythonCallableTool,
     ToolRegistry,
     register_builtin_tools,
+    SafetyChecker,
 )
 from automation_agent.config import AutomationConfig, load_config
+from automation_agent.safety import SafetyViolationError
 
 
 PROVIDER_FACTORY = {
@@ -28,6 +31,18 @@ PROVIDER_FACTORY = {
         api_key=cfg.api_key,
         base_url=cfg.base_url,
         **(cfg.options or {}),
+    ),
+    "openai_compat": lambda cfg: OpenAICompatibleProvider(
+        base_url=cfg.base_url or "http://localhost:11434/v1",
+        model=cfg.model or "llama3",
+        api_key=cfg.api_key,
+        options=cfg.options or {},
+    ),
+    "ollama": lambda cfg: OpenAICompatibleProvider(
+        base_url=cfg.base_url or "http://localhost:11434/v1",
+        model=cfg.model or "llama3",
+        api_key=cfg.api_key,
+        options=cfg.options or {},
     ),
     "llama": lambda cfg: LlamaCppProvider(
         model_path=cfg.options.get("model_path") if cfg.options else "model.gguf",
@@ -68,12 +83,30 @@ def main() -> None:
                 )
             )
 
-    agent = AutomationAgent(provider=provider, registry=registry, max_steps=config.max_steps)
+    safety_checker = None
+    if config.safety:
+        safety_checker = SafetyChecker(
+            blocked_terms=config.safety.blocked_terms,
+            guard_url=config.safety.guard_url,
+            api_key=config.safety.api_key,
+            options=config.safety.options,
+        )
+
+    agent = AutomationAgent(
+        provider=provider,
+        registry=registry,
+        max_steps=config.max_steps,
+        safety=safety_checker,
+    )
     context: Dict[str, Any] = {}
     if args.context:
         context = json.loads(args.context.read_text(encoding="utf-8"))
 
-    plan = agent.plan_workflow(args.prompt, context=context)
+    try:
+        plan = agent.plan_workflow(args.prompt, context=context)
+    except SafetyViolationError as exc:
+        print(f"[SAFETY] {exc}")
+        return
     results = agent.execute_workflow(plan, shared_state={})
 
     for result in results:

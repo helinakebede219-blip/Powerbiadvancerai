@@ -1,10 +1,11 @@
-# Powerbiadvancerai
+# LINA Automated
 
-PowerBI Advancer AI is a modular automation agent that turns natural language prompts into actionable workflows for Power BI and data engineering teams. It provides:
+LINA Automated is a modular automation agent that turns natural language prompts into actionable workflows for Power BI and data engineering teams. It provides:
 
 - A planning agent that converts prompts into structured execution plans.
 - Built-in tools for ingesting data, transforming datasets, publishing dashboards, and documenting assets.
-- Extensible integrations with OpenAI, local Llama models, or custom Model Context Protocol (MCP) services.
+- Extensible integrations with OpenAI, OpenAI-compatible runtimes such as Ollama, local Llama models, or custom Model Context Protocol (MCP) services.
+- Configurable safety guardrails that can combine local policies with hosted moderation endpoints.
 - A CLI runner and configuration system for rapid experimentation and automation.
 
 ## Getting started
@@ -25,14 +26,19 @@ pip install -e .[mcp]
 
 ### Configure the agent
 
-Edit `automation_config.yml` to select a provider and add custom tools. By default the project uses the deterministic `echo` provider so you can explore the workflow without external APIs.
+Edit `automation_config.yml` to select a provider, configure safety guardrails, and add custom tools. By default the project uses the deterministic `echo` provider so you can explore the workflow without external APIs.
 
 ```yaml
 provider:
-  name: openai
-  model: gpt-4o-mini
-  api_key: "$OPENAI_API_KEY"  # or set the environment variable
+  name: ollama
+  base_url: http://localhost:11434/v1
+  model: llama3
 max_steps: 6
+safety:
+  blocked_terms:
+    - drop production database
+  guard_url: https://safety.example.com/v1/guard
+  api_key: "$SAFETY_TOKEN"
 ```
 
 You can also embed inline Python tools:
@@ -62,8 +68,10 @@ Sample output:
 ### Using custom providers
 
 - **OpenAI** – set `provider.name` to `openai` and provide a valid API key.
+- **Ollama or other OpenAI-compatible APIs** – set `provider.name` to `ollama` (alias of `openai_compat`) and point `provider.base_url` at your deployment.
 - **Llama.cpp** – set `provider.name` to `llama` and supply `tools.options.model_path` to point at your GGUF model.
 - **MCP bridges** – register `MCPTool` instances in Python or extend the configuration loader to spin up MCP clients for Creator tools.
+- **Safety guardrails** – declare a `safety` block to combine keyword filtering with hosted moderation services such as OpenAI Safeguards or GPT-OS.
 
 ## Tests
 
