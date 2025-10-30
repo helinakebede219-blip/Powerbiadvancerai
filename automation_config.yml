@@ -3,6 +3,9 @@ provider:
   model: null
   options: {}
 max_steps: 5
+safety:
+  enabled: true
+  rules: []
 tools:
   custom_python:
     description: Example inline python tool
