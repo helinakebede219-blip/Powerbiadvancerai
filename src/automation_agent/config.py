@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -26,20 +26,41 @@ class ProviderConfig:
 
 
 @dataclass
+class SafetySettings:
+    """Configuration for prompt and plan safety checks."""
+
+    blocked_terms: list[str] = field(default_factory=list)
+    guard_url: Optional[str] = None
+    api_key: Optional[str] = None
+    options: Dict[str, Any] | None = None
+
+
+@dataclass
 class AutomationConfig:
     """Top level configuration for the automation runtime."""
 
     provider: ProviderConfig
     tools: Dict[str, Dict[str, Any]] | None = None
     max_steps: int = 10
+    safety: Optional[SafetySettings] = None
 
     @classmethod
     def from_dict(cls, payload: Dict[str, Any]) -> "AutomationConfig":
         provider = ProviderConfig(**payload.get("provider", {}))
+        safety_payload = payload.get("safety") or {}
+        safety = None
+        if safety_payload:
+            safety = SafetySettings(
+                blocked_terms=list(safety_payload.get("blocked_terms", [])),
+                guard_url=safety_payload.get("guard_url"),
+                api_key=safety_payload.get("api_key"),
+                options=safety_payload.get("options"),
+            )
         return cls(
             provider=provider,
             tools=payload.get("tools"),
             max_steps=int(payload.get("max_steps", 10)),
+            safety=safety,
         )
 
 

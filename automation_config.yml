@@ -1,8 +1,12 @@
 provider:
-  name: echo
-  model: null
+  name: ollama
+  base_url: http://localhost:11434/v1
+  model: llama3
   options: {}
 max_steps: 5
+safety:
+  blocked_terms:
+    - drop production database
 tools:
   custom_python:
     description: Example inline python tool

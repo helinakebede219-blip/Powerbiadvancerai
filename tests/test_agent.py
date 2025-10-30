@@ -7,6 +7,7 @@ import pytest
 
 from automation_agent.agent import AutomationAgent
 from automation_agent.llm import LLMProvider
+from automation_agent.safety import SafetyChecker, SafetyViolationError
 from automation_agent.tooling import PythonCallableTool, ToolRegistry, register_builtin_tools
 
 
@@ -50,3 +51,32 @@ def test_custom_tool_execution():
     results = agent.execute_workflow(agent.plan_workflow("use echo"))
     assert results[0].status == "success"
     assert results[0].output == "HELLO"
+
+
+def test_prompt_blocked_by_safety():
+    provider = DummyProvider(response=json.dumps({"steps": []}))
+    registry = register_builtin_tools()
+    safety = SafetyChecker(blocked_terms=["forbidden"])
+    agent = AutomationAgent(provider=provider, registry=registry, safety=safety)
+    with pytest.raises(SafetyViolationError):
+        agent.plan_workflow("This prompt includes a forbidden phrase")
+
+
+def test_plan_blocked_by_safety():
+    provider = DummyProvider(
+        response=json.dumps(
+            {
+                "steps": [
+                    {
+                        "tool": "analysis",
+                        "description": "Plan to drop production database",
+                    }
+                ]
+            }
+        )
+    )
+    registry = register_builtin_tools()
+    safety = SafetyChecker(blocked_terms=["drop production database"])
+    agent = AutomationAgent(provider=provider, registry=registry, safety=safety)
+    with pytest.raises(SafetyViolationError):
+        agent.plan_workflow("Plan something risky")
