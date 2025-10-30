@@ -1,0 +1,12 @@
+provider:
+  name: echo
+  model: null
+  options: {}
+max_steps: 5
+tools:
+  custom_python:
+    description: Example inline python tool
+    script: |
+      result = f"Processed {args.get('item', 'unknown item')}"
+      state.setdefault('custom', []).append(result)
+      output = result
