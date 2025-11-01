@@ -17,10 +17,12 @@ from automation_agent import (
     PromptSafetyEngine,
     PromptSafetyRule,
     PythonCallableTool,
+    SafetyCoordinator,
     ToolRegistry,
     register_builtin_tools,
 )
 from automation_agent.config import AutomationConfig, SafetyConfig, load_config
+from automation_agent.safety import RemoteGuardClient
 
 
 PROVIDER_FACTORY = {
@@ -97,12 +99,15 @@ def exec_tool(body: str, args: Dict[str, Any], state: Dict[str, Any]) -> str:
     return str(output) if output is not None else ""
 
 
-def build_safety_engine(config: SafetyConfig) -> PromptSafetyEngine | None:
+def build_safety_engine(config: SafetyConfig) -> PromptSafetyEngine | SafetyCoordinator | None:
     if not config.enabled:
         return None
     engine = PromptSafetyEngine.default()
     for payload in config.rules or []:
         engine.add_rule(PromptSafetyRule.from_dict(payload))
+    if config.remote_guard:
+        remote_guard = RemoteGuardClient(config.remote_guard)
+        return SafetyCoordinator(local_engine=engine, remote_guard=remote_guard)
     return engine
 
 

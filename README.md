@@ -6,7 +6,7 @@ LINA AUTOMATED is a modular automation agent that turns natural language prompts
 - Built-in tools for ingesting data, transforming datasets, publishing dashboards, and documenting assets.
 - Extensible integrations with OpenAI-compatible providers (including Ollama), local Llama models, or custom Model Context Protocol (MCP) services.
 - A CLI runner and configuration system for rapid experimentation and automation.
-- A configurable prompt safety engine inspired by GPT-OS safeguards to detect risky requests before execution.
+- A configurable prompt safety engine inspired by GPT-OS safeguards to detect risky requests before execution, with optional remote guard integration.
 
 ## Getting started
 
@@ -37,6 +37,9 @@ provider:
 max_steps: 6
 safety:
   enabled: true
+  remote_guard:
+    endpoint: "https://guard.example.com/check"
+    api_key: "$SAFETY_API_KEY"
   rules:
     - name: block_custom_keyword
       pattern: "ACME_TOP_SECRET"
@@ -70,6 +73,7 @@ Sample output:
 - **Llama.cpp** – set `provider.name` to `llama` and supply `tools.options.model_path` to point at your GGUF model.
 - **MCP bridges** – register `MCPTool` instances in Python or extend the configuration loader to spin up MCP clients for Creator tools.
 - **Prompt safety** – toggle `safety.enabled` to disable checks or append custom regex rules for your organisation.
+- **Remote guardrails** – configure `safety.remote_guard` with an endpoint that returns a JSON payload containing `passed`/`findings` to augment the local rule engine. Failures to reach the remote guard gracefully fall back to the local rules.
 
 ## Tests
 
