@@ -12,11 +12,19 @@ from __future__ import annotations
 
 import json
 import re
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Optional, Pattern, Tuple
+from urllib import error as urllib_error
+from urllib import request as urllib_request
+
+from .config import RemoteGuardConfig
 
 
 Severity = str
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -127,7 +135,7 @@ class PromptSafetyEngine:
                         remediation=rule.remediation,
                         tags=rule.tags,
                     )
-                )
+        )
         return SafetyReport(findings=findings)
 
     @classmethod
@@ -182,10 +190,85 @@ class PromptSafetyEngine:
         return engine
 
 
+class RemoteGuardError(RuntimeError):
+    """Raised when the remote guard cannot process a request."""
+
+
+@dataclass
+class RemoteGuardClient:
+    """Client wrapper that queries a remote guard service."""
+
+    config: RemoteGuardConfig
+
+    def inspect(self, prompt: str, *, context: Optional[Dict[str, Any]] = None) -> SafetyReport:
+        payload = {"prompt": prompt, "context": context or {}}
+        data = json.dumps(payload).encode("utf-8")
+        request = urllib_request.Request(self.config.endpoint, data=data, method="POST")
+        request.add_header("Content-Type", "application/json")
+        if self.config.api_key:
+            request.add_header("Authorization", f"Bearer {self.config.api_key}")
+        for header, value in (self.config.headers or {}).items():
+            request.add_header(header, value)
+        try:
+            with urllib_request.urlopen(request, timeout=self.config.timeout) as response:
+                body = response.read().decode("utf-8")
+        except urllib_error.URLError as exc:  # pragma: no cover - network failure path
+            raise RemoteGuardError(f"Remote guard request failed: {exc}") from exc
+        if not body:
+            return SafetyReport()
+        try:
+            payload = json.loads(body)
+        except json.JSONDecodeError as exc:
+            raise RemoteGuardError("Remote guard returned invalid JSON") from exc
+        if not isinstance(payload, dict):
+            raise RemoteGuardError("Remote guard response must be a JSON object")
+        findings_payload = []
+        if not payload.get("passed", True):
+            findings_payload = payload.get("findings") or []
+        findings: List[SafetyFinding] = []
+        for raw in findings_payload:
+            if not isinstance(raw, dict):
+                continue
+            findings.append(
+                SafetyFinding(
+                    rule=str(raw.get("rule", "remote_guard")),
+                    message=str(raw.get("message", "Remote guard flagged the prompt.")),
+                    severity=str(raw.get("severity", "medium")),
+                    remediation=raw.get("remediation"),
+                    tags=tuple(raw.get("tags", ())),
+                )
+            )
+        return SafetyReport(findings=findings)
+
+
+@dataclass
+class SafetyCoordinator:
+    """Combine local safety rules with optional remote guard results."""
+
+    local_engine: PromptSafetyEngine | None = None
+    remote_guard: RemoteGuardClient | None = None
+
+    def inspect(self, prompt: str, *, context: Optional[Dict[str, Any]] = None) -> SafetyReport:
+        findings: List[SafetyFinding] = []
+        if self.remote_guard:
+            try:
+                remote_report = self.remote_guard.inspect(prompt, context=context)
+                findings.extend(remote_report.findings)
+            except RemoteGuardError as exc:
+                LOGGER.warning("Remote guard unavailable: %s", exc)
+        if self.local_engine:
+            local_report = self.local_engine.inspect(prompt, context=context)
+            findings.extend(local_report.findings)
+        return SafetyReport(findings=findings)
+
+
 __all__ = [
     "PromptSafetyEngine",
     "PromptSafetyRule",
     "SafetyFinding",
     "SafetyReport",
+    "SafetyCoordinator",
+    "RemoteGuardClient",
+    "RemoteGuardError",
 ]
 

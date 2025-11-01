@@ -7,6 +7,31 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+
+@dataclass
+class RemoteGuardConfig:
+    """Configuration for optional remote safety guardrails."""
+
+    endpoint: str
+    api_key: Optional[str] = None
+    headers: Dict[str, str] | None = None
+    timeout: float = 10.0
+
+    @classmethod
+    def from_dict(cls, payload: Dict[str, Any]) -> "RemoteGuardConfig":
+        endpoint = payload.get("endpoint")
+        if not endpoint:
+            raise ValueError("Remote guard configuration requires an 'endpoint'")
+        headers = payload.get("headers")
+        if headers is not None and not isinstance(headers, dict):
+            raise ValueError("Remote guard 'headers' must be a mapping of HTTP headers")
+        return cls(
+            endpoint=str(endpoint),
+            api_key=payload.get("api_key"),
+            headers={str(k): str(v) for k, v in (headers or {}).items()},
+            timeout=float(payload.get("timeout", 10.0)),
+        )
+
 # PyYAML is optional; fall back to JSON-only mode if unavailable.
 try:  # pragma: no cover - import guard
     import yaml  # type: ignore
@@ -51,14 +76,23 @@ class SafetyConfig:
 
     enabled: bool = True
     rules: List[Dict[str, Any]] | None = None
+    remote_guard: Optional[RemoteGuardConfig] = None
 
     @classmethod
     def from_dict(cls, payload: Dict[str, Any]) -> "SafetyConfig":
         if not payload:
             return cls()
+        remote_payload = payload.get("remote_guard")
+        remote_guard = None
+        if isinstance(remote_payload, dict) and remote_payload:
+            try:
+                remote_guard = RemoteGuardConfig.from_dict(remote_payload)
+            except ValueError:
+                remote_guard = None
         return cls(
             enabled=bool(payload.get("enabled", True)),
             rules=payload.get("rules"),
+            remote_guard=remote_guard,
         )
 
 
