@@ -4,8 +4,22 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any, Dict
+
+
+def _ensure_src_on_path() -> None:
+    """Make the ``src`` directory importable when running from a checkout."""
+
+    project_root = Path(__file__).resolve().parent.parent
+    src_path = project_root / "src"
+    if src_path.exists() and str(src_path) not in sys.path:
+        sys.path.insert(0, str(src_path))
+
+
+_ensure_src_on_path()
+
 
 from automation_agent import (
     AutomationAgent,
